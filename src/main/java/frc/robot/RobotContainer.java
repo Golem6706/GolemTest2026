@@ -1,151 +1,219 @@
-// Copyright 2021-2025 FRC 6328
-// http://github.com/Mechanical-Advantage
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// version 3 as published by the Free Software Foundation or
-// available in the root directory of this project.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
 
 package frc.robot;
 
-import com.pathplanner.lib.auto.AutoBuilder;
+import static edu.wpi.first.units.Units.Seconds;
+
+import frc.robot.Constants.OperatorConstants;
+import frc.robot.commands.Autos;
+import frc.robot.commands.ExampleCommand;
+import frc.robot.commands.drive.JoystickDrive;
+import frc.robot.constants.DriveTrainConstants;
+import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.ExampleSubsystem;
+import frc.robot.subsystems.drive.SwerveDrive;
+import frc.robot.subsystems.drive.IO.CanBusIOReal;
+import frc.robot.subsystems.drive.IO.GyroIOPigeon2;
+import frc.robot.subsystems.drive.IO.GyroIOSim;
+import frc.robot.subsystems.drive.IO.ModuleIOSim;
+import frc.robot.subsystems.drive.IO.ModuleIOTalon;
+import frc.robot.utils.MapleJoystickDriveInput;
+
+import java.text.BreakIterator;
+import java.util.Optional;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
+
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
+import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
+import org.littletonrobotics.junction.inputs.LoggedPowerDistribution;
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.GenericHID;
-import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.commands.DriveCommands;
-import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.GyroIO;
-import frc.robot.subsystems.drive.GyroIOPigeon2;
-import frc.robot.subsystems.drive.ModuleIO;
-import frc.robot.subsystems.drive.ModuleIOSim;
-import frc.robot.subsystems.drive.ModuleIOTalonFX;
-import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
+import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
+import org.ironmaple.utils.FieldMirroringUtils;
+import org.ironmaple.utils.mathutils.MapleCommonMath;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
  * "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
  * periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
- * subsystems, commands, and button mappings) should be declared here.
+ * subsystems, commands, and trigger mappings) should be declared here.
  */
 public class RobotContainer {
+  // The robot's subsystems and commands are defined here...
+  private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
+
+  public static final boolean SIMULATE_AUTO_PLACEMENT_INACCURACY = true;
+  
+  // PDP for AdvantageKit logging
+  public final LoggedPowerDistribution powerDistribution;
+
   // Subsystems
-  private final Drive drive;
+  public final SwerveDrive drive;
+
 
   // Controller
-  private final CommandXboxController controller = new CommandXboxController(0);
+  public final DriverMap driver = new DriverMap.LeftHandedXbox(0);
 
-  // Dashboard inputs
-  private final LoggedDashboardChooser<Command> autoChooser;
+  // private final SendableChooser<Supplier<Command>> testChooser;
+
+
+  // Simulated drive
+  private final SwerveDriveSimulation driveSimulation;
+
+  private final Field2d field = new Field2d();
+  // public final Trigger isAlgaeMode;
+
+  // Replace with CommandPS4Controller or CommandJoystick if needed
+  // private final CommandXboxController m_driverController =
+  //     new CommandXboxController(OperatorConstants.kDriverControllerPort);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    switch (Constants.currentMode) {
-      case REAL:
-        // Real robot, instantiate hardware IO implementations
-        drive =
-            new Drive(
-                new GyroIOPigeon2(),
-                new ModuleIOTalonFX(TunerConstants.FrontLeft),
-                new ModuleIOTalonFX(TunerConstants.FrontRight),
-                new ModuleIOTalonFX(TunerConstants.BackLeft),
-                new ModuleIOTalonFX(TunerConstants.BackRight));
-        break;
 
-      case SIM:
+    switch (Robot.CURRENT_ROBOT_MODE) {
+      case REAL ->{
+        driveSimulation = null;
+        powerDistribution = LoggedPowerDistribution.getInstance(1, PowerDistribution.ModuleType.kRev);
+        
+        // CTRE Chassis
+        drive = new SwerveDrive(
+          SwerveDrive.DriveType.CTRE_TIME_SYNCHRONIZED,
+          new GyroIOPigeon2(TunerConstants.DrivetrainConstants), 
+          new CanBusIOReal(TunerConstants.kCANBus),
+          new ModuleIOTalon(TunerConstants.FrontLeft, "FrontLeft"),
+          new ModuleIOTalon(TunerConstants.FrontRight, "FrontRight"),
+          new ModuleIOTalon(TunerConstants.BackLeft, "BackLeft"),
+          new ModuleIOTalon(TunerConstants.BackRight, "BackRight"));
+
+        // Adding Vision, arm, elevator, coralHolder initialization
+      }
+
+      case SIM ->{
+        SimulatedArena.overrideSimulationTimings(
+            Seconds.of(Robot.defaultPeriodSecs), DriveTrainConstants.SIMULATION_TICKS_IN_1_PERIOD);
+            
+        this.driveSimulation = new SwerveDriveSimulation(
+            DriveTrainSimulationConfig.Default()
+              .withRobotMass(DriveTrainConstants.ROBOT_MASS)
+              .withBumperSize(DriveTrainConstants.BUMPER_LENGTH, DriveTrainConstants.BUMPER_WIDTH)
+              .withTrackLengthTrackWidth(
+                    DriveTrainConstants.TRACK_LENGTH, DriveTrainConstants.TRACK_WIDTH)
+              .withSwerveModule(new SwerveModuleSimulationConfig(
+                    DriveTrainConstants.DRIVE_MOTOR_MODEL, 
+                    DriveTrainConstants.STEER_MOTOR_MODEL, 
+                    DriveTrainConstants.DRIVE_GEAR_RATIO, 
+                    DriveTrainConstants.STEER_GEAR_RATIO, 
+                    DriveTrainConstants.DRIVE_FRICTION_VOLTAGE, 
+                    DriveTrainConstants.STEER_FRICTION_VOLTAGE, 
+                    DriveTrainConstants.WHEEL_RADIUS, 
+                    DriveTrainConstants.STEER_INERTIA, 
+                    DriveTrainConstants.WHEEL_COEFFICIENT_OF_FRICTION))
+              .withGyro(DriveTrainConstants.gyroSimulationFactory),
+           new Pose2d(3, 3, new Rotation2d()));
+
+        SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
+        powerDistribution = LoggedPowerDistribution.getInstance();
+
         // Sim robot, instantiate physics sim IO implementations
-        drive =
-            new Drive(
-                new GyroIO() {},
-                new ModuleIOSim(TunerConstants.FrontLeft),
-                new ModuleIOSim(TunerConstants.FrontRight),
-                new ModuleIOSim(TunerConstants.BackLeft),
-                new ModuleIOSim(TunerConstants.BackRight));
-        break;
+        final ModuleIOSim frontLeft = new ModuleIOSim(driveSimulation.getModules()[0]),
+                  frontRight = new ModuleIOSim(driveSimulation.getModules()[1]),
+                  backLeft = new ModuleIOSim(driveSimulation.getModules()[2]),
+                  backRight = new ModuleIOSim(driveSimulation.getModules()[3]);
 
-      default:
+        final GyroIOSim gyroIOSim = new GyroIOSim(driveSimulation.getGyroSimulation());
+
+        drive = new SwerveDrive(
+                  SwerveDrive.DriveType.GENERIC, 
+                  gyroIOSim,
+                  (canBusInput) -> {}, 
+                  frontLeft, 
+                  frontRight, 
+                  backLeft, 
+                  backRight);
+         SimulatedArena.getInstance().resetFieldForAuto();
+        // Adding Vision, arm, elevator, coralHolder initialization
+
+      }
+    
+      default ->{
+        this.driveSimulation = null;
+
+        powerDistribution = LoggedPowerDistribution.getInstance();
+
         // Replayed robot, disable IO implementations
-        drive =
-            new Drive(
-                new GyroIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {});
-        break;
+        drive = new SwerveDrive
+                  (SwerveDrive.DriveType.GENERIC, 
+                  (canBusInputs) -> {},
+                  (inputs) -> {}, 
+                  (inputs) -> {}, 
+                  (inputs) -> {}, 
+                  (inputs) -> {}, 
+                  (inputs) -> {});
+      }
     }
 
-    // Set up auto routines
-    autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+    // SmartDashboard.putData("Select Test", testChooser = buildTestChooser());
 
-    // Set up SysId routines
-    autoChooser.addOption(
-        "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
-    autoChooser.addOption(
-        "Drive Simple FF Characterization", DriveCommands.feedforwardCharacterization(drive));
-    autoChooser.addOption(
-        "Drive SysId (Quasistatic Forward)",
-        drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
-    autoChooser.addOption(
-        "Drive SysId (Quasistatic Reverse)",
-        drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
-    autoChooser.addOption(
-        "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
-    autoChooser.addOption(
-        "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    SmartDashboard.putData("Field", field);
 
-    // Configure the button bindings
-    configureButtonBindings();
+    // Configure the trigger bindings
+    configureBindings();
   }
 
   /**
-   * Use this method to define your button->command mappings. Buttons can be created by
-   * instantiating a {@link GenericHID} or one of its subclasses ({@link
-   * edu.wpi.first.wpilibj.Joystick} or {@link XboxController}), and then passing it to a {@link
-   * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
+   * Use this method to define your trigger->command mappings. Triggers can be created via the
+   * {@link Trigger#Trigger(java.util.function.BooleanSupplier)} constructor with an arbitrary
+   * predicate, or via the named factories in {@link
+   * edu.wpi.first.wpilibj2.command.button.CommandGenericHID}'s subclasses for {@link
+   * CommandXboxController Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller
+   * PS4} controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
+   * joysticks}.
    */
-  private void configureButtonBindings() {
-    // Default command, normal field-relative drive
-    drive.setDefaultCommand(
-        DriveCommands.joystickDrive(
-            drive,
-            () -> -controller.getRightY(),
-            () -> -controller.getRightX(),
-            () -> -controller.getLeftX()));
+  private void configureBindings() {
+    // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
+    new Trigger(m_exampleSubsystem::exampleCondition)
+        .onTrue(new ExampleCommand(m_exampleSubsystem));
 
-    // Lock to 0° when A button is held
-    controller
-        .a()
-        .whileTrue(
-            DriveCommands.joystickDriveAtAngle(
-                drive,
-                () -> -controller.getRightY(),
-                () -> -controller.getRightX(),
-                () -> new Rotation2d()));
+    // Joystick drive command
+    final MapleJoystickDriveInput driveInput = driver.getDriveInput();
+    IntSupplier pov = () -> -1;
+    final JoystickDrive joystickDrive = new JoystickDrive(driveInput, () -> true , pov, drive);
+    drive.setDefaultCommand(joystickDrive);
+    JoystickDrive.instance = Optional.of(joystickDrive);
 
-    // Switch to X pattern when X button is pressed
-    controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+    // reset gyro heading manually in case the vision does not work
+    driver.resetOdometryButton()
+        .onTrue(Commands.runOnce(
+                        () -> drive.setPose(new Pose2d(
+                                                drive.getPose().getTranslation(), FieldMirroringUtils.getCurrentAllianceDriverStationFacing())),
+                        drive)
+            .ignoringDisable(true));
 
-    // Reset gyro to 0° when B button is pressed
-    controller
-        .b()
-        .onTrue(
-            Commands.runOnce(
-                    () ->
-                        drive.setPose(
-                            new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
-                    drive)
-                .ignoringDisable(true));
+    // Lock chassis with x-formation
+    driver.lockChassisWithXFormatButton().whileTrue(drive.lockChassisWithXFormation());
+
+    // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
+    // cancelling on release.
+    // m_driverController.b().whileTrue(m_exampleSubsystem.exampleMethodCommand());
   }
 
   /**
@@ -154,6 +222,7 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    return autoChooser.get();
+    // An example command will be run in autonomous
+    return Autos.exampleAuto(m_exampleSubsystem);
   }
 }
