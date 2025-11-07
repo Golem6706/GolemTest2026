@@ -52,7 +52,7 @@ public class SwerveModule {
 
     public void updateOdometryInputs() {
         io.updateInputs(inputs);
-        Logger.processInputs("Drive/Module-" + name, inputs);
+        Logger.processInputs("Drive/" + name, inputs);
     }
 
     public void modulePeriodic() {

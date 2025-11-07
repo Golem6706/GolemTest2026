@@ -30,6 +30,7 @@ import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
 import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
+import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggedPowerDistribution;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -43,6 +44,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
@@ -72,6 +74,9 @@ public class RobotContainer {
 
   // Controller
   public final DriverMap driver = new DriverMap.LeftHandedXbox(0);
+
+  // private final LoggedDashboardChooser<Auto> autoChooser;
+  private final SendableChooser<Supplier<Command>> testChooser;
 
   // private final SendableChooser<Supplier<Command>> testChooser;
 
@@ -174,10 +179,28 @@ public class RobotContainer {
     // SmartDashboard.putData("Select Test", testChooser = buildTestChooser());
 
     SmartDashboard.putData("Field", field);
+    SmartDashboard.putData("Selecte Test By Matt", testChooser = buidTestChooser());
 
     // Configure the trigger bindings
-    configureBindings();
+    configureButtonBindings();
   }
+
+
+  private SendableChooser<Supplier<Command>> buidTestChooser() {
+    final SendableChooser<Supplier<Command>> testChooser = new SendableChooser<>();
+    testChooser.setDefaultOption("SwerveTest", Commands::none);
+    testChooser.addOption(
+      "Drive SysId - Quasistatic - Forward", () -> drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
+    testChooser.addOption(
+      "Drive SysId - Quasistatic - Reverse", () -> drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+    testChooser.addOption(
+      "Drive SysId - Dynamic - Forward", () -> drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
+    testChooser.addOption(
+      "Drive SysId - Dynamic - Reverse", () -> drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    return testChooser;
+  }
+
+
 
   /**
    * Use this method to define your trigger->command mappings. Triggers can be created via the
@@ -188,7 +211,7 @@ public class RobotContainer {
    * PS4} controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
    * joysticks}.
    */
-  private void configureBindings() {
+  public void configureButtonBindings() {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     new Trigger(m_exampleSubsystem::exampleCondition)
         .onTrue(new ExampleCommand(m_exampleSubsystem));
@@ -204,7 +227,9 @@ public class RobotContainer {
     driver.resetOdometryButton()
         .onTrue(Commands.runOnce(
                         () -> drive.setPose(new Pose2d(
-                                                drive.getPose().getTranslation(), FieldMirroringUtils.getCurrentAllianceDriverStationFacing())),
+                                                drive.getPose().getTranslation(), 
+                                                
+                                                FieldMirroringUtils.getCurrentAllianceDriverStationFacing())),
                         drive)
             .ignoringDisable(true));
 
@@ -224,5 +249,18 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
     return Autos.exampleAuto(m_exampleSubsystem);
+  }
+
+  public Command getTestCommand() {
+    return testChooser.getSelected().get();
+  }
+
+  public void updateFieldSimAndDisplay() {
+    if (driveSimulation == null) return;
+    SimulatedArena.getInstance().simulationPeriodic();
+    Logger.recordOutput("FieldSimulation/RobotPosition", driveSimulation.getSimulatedDriveTrainPose());
+    Logger.recordOutput("FieldSimulation/Algae", SimulatedArena.getInstance().getGamePiecesArrayByType("Algae"));
+    Logger.recordOutput("FieldSimulation/Coral", SimulatedArena.getInstance().getGamePiecesArrayByType("Coral"));
+    
   }
 }

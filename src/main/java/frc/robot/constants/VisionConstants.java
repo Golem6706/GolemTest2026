@@ -10,7 +10,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Time;
 import frc.robot.Robot;
-// import frc.robot.subsystems.vision.apriltags.PhotonCameraProperties;                //By Matt at 10.9
+import frc.robot.subsystems.vision.apriltags.PhotonCameraProperties;                //By Matt at 10.9
 import java.util.List;
 
 public class VisionConstants {
@@ -51,7 +51,7 @@ public class VisionConstants {
     public static final Distance VISION_SENSITIVE_ESTIMATOR_ODOMETRY_TRANSLATIONAL_STANDARD_ERROR = Meters.of(0.8);
 
     public static final Angle VISION_SENSITIVE_ESTIMATOR_GYRO_ROTATIONAL_STANDARD_ERROR = Degrees.of(1.5);
-    /* 
+     
     public static final List<PhotonCameraProperties> photonVisionCameras =
             switch (Robot.CURRENT_ROBOT) {
                 case TEAM_5516_DEVBOT_HYDROXIDE_I -> List.of(
@@ -238,5 +238,4 @@ public class VisionConstants {
                                 Degrees.of(-18),
                                 Degrees.zero()));
             };
-            */
 }

@@ -29,7 +29,7 @@ public class OdometryThreadReal extends Thread implements OdometryThread {
         this.statusSignals = statusSignals;
 
         setName("OdometryThread");
-        setDaemon(true);
+        setDaemon(true);  //设置为守护线程，当主线程结束时，守护线程自动结束
     }
 
     @Override

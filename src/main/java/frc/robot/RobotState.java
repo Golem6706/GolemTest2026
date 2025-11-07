@@ -26,7 +26,7 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
-// import frc.robot.subsystems.vision.apriltags.MapleMultiTagPoseEstimator;
+import frc.robot.subsystems.vision.apriltags.MapleMultiTagPoseEstimator;
 import frc.robot.utils.AlertsManager;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -115,7 +115,7 @@ public class RobotState {
         visionSensitivePose = visionSensitivePose.exp(finalTwist);
     }
 
-/*  //By Matt at 10.9
+  //By Matt at 10.9
     public void addVisionObservation(MapleMultiTagPoseEstimator.VisionObservation observation) {
         // If measurement is old enough to be outside the pose buffer's time-span, skip.
         try {
@@ -175,7 +175,7 @@ public class RobotState {
         // then replaying odometry data
         return estimateAtTime.plus(scaledTransform).plus(sampleToOdometryTransform);
     }
-*/
+
     public Rotation2d getRotation() {
         return primaryEstimatorPose.getRotation();
     }

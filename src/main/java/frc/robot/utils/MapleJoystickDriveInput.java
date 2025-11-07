@@ -27,7 +27,7 @@ public class MapleJoystickDriveInput {
 
     /**
      * reads the joystick inputs and calculate the chassis speeds
-     *
+     * Chassis speeds contains 3 params which are X-Speed, Y-Speed and Rotation-Speed
      * @return the chassis speeds requested by the pilot, driver-station-centric
      */
     public ChassisSpeeds getJoystickChassisSpeeds(

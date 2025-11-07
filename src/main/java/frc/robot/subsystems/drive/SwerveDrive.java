@@ -169,6 +169,7 @@ public class SwerveDrive extends SubsystemBase implements HolonomicDriveSubsyste
                 "RobotState/ControlLoopPoseWithLookAhead",
                 RobotState.getInstance().getPoseWithLookAhead());
 
+        //Check whether the robot will tilt over or fall down       
         robotTipping = robotTippingDebouncer.calculate(
                 TipOverDetection.getTippingAngleRad(getDriveTrain3dOrientation()) > TIP_OVER_THRESHOLD.in(Radians));
         Logger.recordOutput(
@@ -370,6 +371,7 @@ public class SwerveDrive extends SubsystemBase implements HolonomicDriveSubsyste
         return CHASSIS_MAX_ANGULAR_ACCELERATION.in(RadiansPerSecondPerSecond);
     }
 
+    /** Display Swerve info on the Dashboard */
     private void startDashboardDisplay() {
         SmartDashboard.putData("Swerve Drive", builder -> {
             builder.setSmartDashboardType("SwerveDrive");
@@ -400,6 +402,7 @@ public class SwerveDrive extends SubsystemBase implements HolonomicDriveSubsyste
                             .minus(FieldMirroringUtils.getCurrentAllianceDriverStationFacing())
                             .getRadians(),
                     null);
+            
         });
     }
 
@@ -436,7 +439,7 @@ public class SwerveDrive extends SubsystemBase implements HolonomicDriveSubsyste
     /*
      * To run characterization for swerve:
      *   1. Select SysId command on dashboard and run robot test.
-     *   2. Export the log file using AdvantageScope, (Format: "WPILOG", Timestamps:"AdvantageKit Cycles", Prefixes:"Drive/,RealOutputs/Drive/SysIdState").
+     *   2. Export the log file using AdvantageScope, (Format: "WPILOG", Timestamps:"AdvantageKit Cycles", Prefixes:"Drive/RealOutputs/Drive/SysIdState").
      *   3. Open the exported log file with Wpilib SysId Tool, select the data:
      *       - Test State: RealOutputs/Drive/SysIdState
      *       - Velocity: Drive/Module-MODULE_NAME/DriveWheelFinalVelocityRevolutionsPerSecond

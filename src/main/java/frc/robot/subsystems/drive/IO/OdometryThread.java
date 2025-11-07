@@ -31,7 +31,7 @@ public interface OdometryThread {
         }
 
         public void writeToDoubleInput(double[] input) {
-            writeToDoubleInput(input, d -> d);
+            writeToDoubleInput(input, d -> d);    //Lambda 表达式，直接返回参数本身，不做任何处理,对应Function<a, b>的作用即把a的数值直接赋值给b后，返回b
         }
 
         public void writeToDoubleInput(double[] input, Function<Double, Double> mapper) {
@@ -43,6 +43,7 @@ public interface OdometryThread {
             for (int i = 0; i < input.length; i++)
                 input[i] = mapper.apply(Objects.requireNonNullElse(queue.poll(), 0.0));
             queue.clear();
+
         }
     }
 
@@ -67,7 +68,7 @@ public interface OdometryThread {
                     registeredInputs.toArray(new OdometryInput[0]),
                     registeredStatusSignals.toArray(new BaseStatusSignal[0]));
             case SIM -> new OdometryThreadSim();
-            case REPLAY -> inputs -> {};
+            case REPLAY -> insputs -> {};
         };
     }
 
