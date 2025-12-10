@@ -11,7 +11,8 @@ public class AprilTagVisionIOReal implements AprilTagVisionIO {
         if (cameraProperties.size() > 16) throw new IllegalArgumentException("max supported camera count is 16");
         cameras = new PhotonCamera[cameraProperties.size()];
 
-        for (int i = 0; i < cameraProperties.size(); i++) cameras[i] = new PhotonCamera(cameraProperties.get(i).name);
+        for (int i = 0; i < cameraProperties.size(); i++) 
+            cameras[i] = new PhotonCamera(cameraProperties.get(i).name);
     }
 
     @Override

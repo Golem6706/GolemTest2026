@@ -11,6 +11,7 @@ import frc.robot.commands.Autos;
 import frc.robot.commands.ExampleCommand;
 import frc.robot.commands.drive.JoystickDrive;
 import frc.robot.constants.DriveTrainConstants;
+import frc.robot.constants.VisionConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.drive.SwerveDrive;
@@ -19,9 +20,15 @@ import frc.robot.subsystems.drive.IO.GyroIOPigeon2;
 import frc.robot.subsystems.drive.IO.GyroIOSim;
 import frc.robot.subsystems.drive.IO.ModuleIOSim;
 import frc.robot.subsystems.drive.IO.ModuleIOTalon;
+import frc.robot.subsystems.vision.apriltags.AprilTagVision;
+import frc.robot.subsystems.vision.apriltags.AprilTagVisionIO;
+import frc.robot.subsystems.vision.apriltags.AprilTagVisionIOReal;
+import frc.robot.subsystems.vision.apriltags.ApriltagVisionIOSim;
+import frc.robot.subsystems.vision.apriltags.PhotonCameraProperties;
 import frc.robot.utils.MapleJoystickDriveInput;
 
 import java.text.BreakIterator;
+import java.util.*;
 import java.util.Optional;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
@@ -70,7 +77,7 @@ public class RobotContainer {
 
   // Subsystems
   public final SwerveDrive drive;
-
+  public final AprilTagVision aprilTagVision;
 
   // Controller
   public final DriverMap driver = new DriverMap.LeftHandedXbox(0);
@@ -93,6 +100,7 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    final List<PhotonCameraProperties> camerasProperties = VisionConstants.photonVisionCameras; //Load configs from VisionConstants.java
 
     switch (Robot.CURRENT_ROBOT_MODE) {
       case REAL ->{
@@ -110,6 +118,7 @@ public class RobotContainer {
           new ModuleIOTalon(TunerConstants.BackRight, "BackRight"));
 
         // Adding Vision, arm, elevator, coralHolder initialization
+        aprilTagVision = new AprilTagVision(new AprilTagVisionIOReal(camerasProperties), camerasProperties);
       }
 
       case SIM ->{
@@ -134,7 +143,7 @@ public class RobotContainer {
                     DriveTrainConstants.WHEEL_COEFFICIENT_OF_FRICTION))
               .withGyro(DriveTrainConstants.gyroSimulationFactory),
            new Pose2d(3, 3, new Rotation2d()));
-
+              
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
         powerDistribution = LoggedPowerDistribution.getInstance();
 
@@ -154,6 +163,14 @@ public class RobotContainer {
                   frontRight, 
                   backLeft, 
                   backRight);
+
+        aprilTagVision = new AprilTagVision(
+             new ApriltagVisionIOSim(
+                   camerasProperties, 
+                   VisionConstants.fieldLayout, 
+                  driveSimulation::getSimulatedDriveTrainPose), 
+              camerasProperties);
+
          SimulatedArena.getInstance().resetFieldForAuto();
         // Adding Vision, arm, elevator, coralHolder initialization
 
@@ -173,6 +190,8 @@ public class RobotContainer {
                   (inputs) -> {}, 
                   (inputs) -> {}, 
                   (inputs) -> {});
+
+        aprilTagVision = new AprilTagVision((inputs) -> {}, camerasProperties);
       }
     }
 

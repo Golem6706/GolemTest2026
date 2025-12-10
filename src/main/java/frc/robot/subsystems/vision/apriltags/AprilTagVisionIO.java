@@ -16,7 +16,7 @@ public interface AprilTagVisionIO {
         public boolean newPipeLineResultAvailable;
         public double timeStampSeconds;
         public int currentTargetsCount;
-        public final int[] fiducialMarksID;
+        public final int[] fiducialMarksID;     // Get the ID of Dectected AprilTag
         public final double[] tagAmbiguities;
         public final Transform3d[] bestCameraToTargets;
         public Optional<Transform3d> bestFieldToCamera = Optional.empty();
