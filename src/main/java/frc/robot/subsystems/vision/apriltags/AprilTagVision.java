@@ -80,13 +80,21 @@ public class AprilTagVision extends SubsystemBase {
         nearestTag = OptionalInt.empty();
         double smallestTagDistanceMeters = Double.POSITIVE_INFINITY;
         for (AprilTagVisionIO.CameraInputs cameraInput : cameraInputs)
+        {
+            System.out.println("The camera ID is " + cameraInput.cameraID);
             for (int i = 0; i < cameraInput.fiducialMarksID.length; i++)
+            {
+                System.out.println("fiducialMarksID lenght is " + cameraInput.fiducialMarksID.length);
                 if (cameraInput.bestCameraToTargets[i].getTranslation().getNorm() < smallestTagDistanceMeters
-                        && cameraInput.fiducialMarksID[i] != -1) {
+                        && cameraInput.fiducialMarksID[i] != -1) 
+                {
                     nearestTag = OptionalInt.of(cameraInput.fiducialMarksID[i]);
+                    System.out.println("The detected AprilTag ID is " + nearestTag);
                     smallestTagDistanceMeters =
                             cameraInput.bestCameraToTargets[i].getTranslation().getNorm();
                 }
+            }
+        }
     }
 
     private static final Pose2d EMPTY_DISPLAY = new Pose2d(-114514, -114514, new Rotation2d());

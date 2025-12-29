@@ -1,0 +1,78 @@
+package frc.robot.subsystems.superstructure.arm;
+
+import static frc.robot.subsystems.superstructure.arm.ArmConstants.*;
+
+import java.util.Optional;
+
+import org.dyn4j.geometry.Rotation;
+
+import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
+
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.units.measure.*;
+import edu.wpi.first.wpilibj.DutyCycleEncoder;
+
+public class ArmIOReal implements ArmIO {
+    /**
+     * The difference between the raw encoder reading angle and the actual angle.
+     * Real Angle = Encoder Angle - Offset Angle
+     * Offset Angle = Encoder Angle - Real Angle
+     */
+    private static final Rotation2d ABSOLUTE_ENCODER_OFFSET = new Rotation2d(HARDWARE_CONSTANTS
+                .ABSOLUTE_ENCODER_READING_AT_UPPER_LIM()
+                .times(HARDWARE_CONSTANTS.ABSOLUTE_ENCONDER_INVERTED() ? -1 : 1))
+        .minus(new Rotation2d(HARDWARE_CONSTANTS.ARM_UPPER_HARD_LIMIT()));
+
+    //Arm Hardware
+    private final TalonFX armTalon;
+    private final DutyCycleEncoder absoluteEncoder;
+
+    //CTRE Motor Signals
+    private final StatusSignal<Angle> relativeEncoderAngle;
+    private final StatusSignal<AngularVelocity> relativeEncoderVelocity;
+    private final StatusSignal<Current> motorSupplyCurrent;
+    private final StatusSignal<Voltage> motorOutputVoltage;
+
+    public ArmIOReal() {
+        // Initialize Hardware 
+        this.armTalon = new TalonFX(HARDWARE_CONSTANTS.ARM_MOTOR_ID());
+        this.absoluteEncoder = new DutyCycleEncoder(HARDWARE_CONSTANTS.ABSOLUTE_ENCONDER_CHANNEL());
+        //Configure Motor
+        armTalon.getConfigurator().apply(new MotorOutputConfigs()
+                                            .withInverted(HARDWARE_CONSTANTS.ARM_MOTOR_INVERTED()
+                                            ? InvertedValue.Clockwise_Positive
+                                            : InvertedValue.CounterClockwise_Positive));
+        armTalon.getConfigurator().apply(new CurrentLimitsConfigs()
+                                            .withSupplyCurrentLimitEnable(true)
+                                            .withSupplyCurrentLimit(ARM_CURRENT_LIMIT));
+        //Obtain Motor Status Signals
+        this.relativeEncoderAngle = armTalon.getPosition();
+        this.relativeEncoderVelocity = armTalon.getVelocity();
+        this.motorSupplyCurrent = armTalon.getSupplyCurrent();
+        this.motorOutputVoltage = armTalon.getMotorVoltage();
+        BaseStatusSignal.setUpdateFrequencyForAll(
+                100, relativeEncoderAngle, relativeEncoderVelocity, motorSupplyCurrent, motorOutputVoltage);
+        armTalon.optimizeBusUtilization();
+    }
+
+    @Override
+    public void updateInputs(ArmInputs inputs) {
+        //Obtain absolute Encoder readings
+        inputs.absoluteEncoderAngle = absoluteEncoder.isConnected()
+                ? Optional.of(Rotation2d.fromRotations(
+                        absoluteEncoder.get() * (HARDWARE_CONSTANTS.ABSOLUTE_ENCONDER_INVERTED() ? -1 : 1))
+                    .minus(ABSOLUTE_ENCODER_OFFSET))
+                : Optional.empty();
+        //Refresh signals
+        StatusCode statusCode = BaseStatusSignal.refreshAll(
+                relativeEncoderAngle, relativeEncoderVelocity, motorSupplyCurrent, motorOutputVoltage);
+        //Obtain Motor Readings
+    }
+
+}

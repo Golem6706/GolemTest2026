@@ -80,7 +80,8 @@ public class RobotContainer {
   public final AprilTagVision aprilTagVision;
 
   // Controller
-  public final DriverMap driver = new DriverMap.LeftHandedXbox(0);
+  public final DriverMap driver = new DriverMap.LeftHandedXbox(0);    // Main Operator controller
+  public final CommandXboxController operator = new CommandXboxController(1);   // Vice Operator controller
 
   // private final LoggedDashboardChooser<Auto> autoChooser;
   private final SendableChooser<Supplier<Command>> testChooser;
