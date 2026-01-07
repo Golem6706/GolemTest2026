@@ -8,7 +8,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.Voltage;
 
 public interface ArmIO {
-
+    
     final class ArmInputs implements LoggableInputs {
         /** The (optional) arm absolute enconder angle which is already calibrated. Empty if the absolute Enconder is disconnected. */
         public Optional<Rotation2d> absoluteEncoderAngle;

@@ -1,5 +1,6 @@
 package frc.robot.subsystems.superstructure.arm;
 
+import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.superstructure.arm.ArmConstants.*;
 
 import java.util.Optional;
@@ -11,12 +12,16 @@ import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class ArmIOReal implements ArmIO {
     /**
@@ -73,6 +78,27 @@ public class ArmIOReal implements ArmIO {
         StatusCode statusCode = BaseStatusSignal.refreshAll(
                 relativeEncoderAngle, relativeEncoderVelocity, motorSupplyCurrent, motorOutputVoltage);
         //Obtain Motor Readings
+        inputs.motorConnected = statusCode.isOK();
+        inputs.relativeEncoderAngledRad = Units.rotationsToRadians(relativeEncoderAngle.getValueAsDouble());
+        inputs.encoderVelocityRadPerSec = Units.rotationsToRadians(relativeEncoderVelocity.getValueAsDouble());
+        inputs.motorSupplyCurrentAmps = motorSupplyCurrent.getValueAsDouble();
+        inputs.motorOutputVolts = motorOutputVoltage.getValueAsDouble();
+
+        SmartDashboard.putNumber("Arm/Raw Encoer Reading", absoluteEncoder.get());
+        SmartDashboard.putBoolean("Arm/Absolute Encoder Connected", absoluteEncoder.isConnected());
     }
 
+    private VoltageOut voltageOut = new VoltageOut(Volts.zero());
+
+    @Override
+    public void setMotorOutput(Voltage voltage) {
+        voltageOut.withOutput(voltage);
+        armTalon.setControl(voltageOut);
+    }
+
+    @Override
+    public void setMotorBrake(boolean brakeModeEnable) {
+        NeutralModeValue value = brakeModeEnable ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+        armTalon.setNeutralMode(value, 0.1);
+    }
 }

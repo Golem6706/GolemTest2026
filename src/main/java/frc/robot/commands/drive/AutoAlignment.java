@@ -249,15 +249,13 @@ public class AutoAlignment {
     }
 */
 
-    /*
-     * 自动贴近目标时的参数配置
-     */
+
     public record AutoAlignmentConfigurations(
-            Distance distanceStartPreciseApproach, // 开始贴近时距离目标的距离
-            LinearVelocity finalAlignmentSpeed, // 贴近的速度
-            Distance finalApproachStraightTrajectoryLength, // 开始贴近时后撤的距离
-            LinearVelocity hitTargetSpeed, // 贴近撞击目标时的速度
-            LinearAcceleration preciseAlignmentMaxAcceleration) // 贴近时的最大加速度
+            Distance distanceStartPreciseApproach, //Distance when begins to approach the Apriltag
+            LinearVelocity finalAlignmentSpeed, // Approaching speed
+            Distance finalApproachStraightTrajectoryLength, // Drawback distance
+            LinearVelocity hitTargetSpeed, 
+            LinearAcceleration preciseAlignmentMaxAcceleration) 
     {
         public static final AutoAlignmentConfigurations DEFAULT_CONFIG = new AutoAlignmentConfigurations(
                 Meters.of(0.5),
